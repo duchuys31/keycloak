@@ -1,0 +1,55 @@
+version: "3.5"
+
+services:
+  postgres:
+    image: postgres:15.2
+    container_name: keycloak-db
+    command: -p ${KEYCLOAK_DB_PORT}
+    environment:
+      POSTGRES_DB: ${KEYCLOAK_DB_DATABASE}
+      POSTGRES_USER: ${KEYCLOAK_DB_USER}
+      POSTGRES_PASSWORD: ${KEYCLOAK_DB_PASSWORD}
+    restart: unless-stopped
+    # volumes:
+    #   - postgres_data:/var/lib/postgresql/data
+    networks:
+      - keycloak-network
+    ports:
+      - 5432:5432
+ 
+  keycloak:
+    image: olpkeycloak:latest
+    container_name: keycloak
+    command: start --optimized
+    ports:
+      - 8443:8443
+    restart: unless-stopped
+    environment:
+      KEYCLOAK_ADMIN: ${KEYCLOAK_ADMIN}
+      KEYCLOAK_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD}
+      KEYCLOAK_EXTRA_ARGS: "--features=token-exchange"
+      # KC_HOSTNAME_STRICT: false
+      # KC_HOSTNAME_STRICT_HTTPS: false
+      # KC_HTTP_ENABLED: true
+      KC_DB: postgres
+      KC_DB_URL: jdbc:postgresql://postgres:${KEYCLOAK_DB_PORT}/${KEYCLOAK_DB_DATABASE}
+      KC_DB_USERNAME: ${KEYCLOAK_DB_USER}
+      KC_DB_PASSWORD: ${KEYCLOAK_DB_PASSWORD}
+      KC_HOSTNAME: "localhost"
+      WEBHOOK_URI: ${WEBHOOK_URI}
+      WEBHOOK_SECRET: ${WEBHOOK_SECRET}
+    # volumes:
+    #   - ./keycloak-extensions:/opt/keycloak/providers
+    networks:
+      - keycloak-network
+    depends_on:
+      - postgres
+
+networks:
+  keycloak-network:
+    name: keycloak-network
+    driver: bridge
+
+volumes:
+  postgres_data:
+    driver: local
